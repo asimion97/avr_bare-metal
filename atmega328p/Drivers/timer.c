@@ -32,7 +32,7 @@ void init_timer(struct timer _timer){
 				
 				OCR0A = _timer.cmp_val;
 				
-				TIMSKO |= (1 << OCEIE0A);
+				TIMSKO |= (1 << OCIE0A);
 				sei(); // activate global interrupt 
 				break;
 			case 1://CTC mode
