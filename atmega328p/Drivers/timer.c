@@ -39,7 +39,9 @@ void init_timer(struct timer _timer){
 			        TCCR0A |= (1 << COM0A1);
 			        
 			        // Set  OC0A (PD6) as output
-                                DDRD |= (1 << PD6);
+                                //DDRD |= (1 << PD6);
+                                DDRD |= (1 << DDD6);
+                                PORTD |= (1 << PORTD6);
                                 
                                 OCR0A = _timer.cmp_val;//set cmp value
 			        break;
@@ -86,8 +88,10 @@ void init_timer(struct timer _timer){
 			        // Set OC0A on compare match when down-countin
 			        TCCR2A |= (1 << COM2A1);
 			        
-			        // Set  OC0A (PD6) as output
-                                DDRD |= (1 << PB1);
+			        // Set  OC2A (Pd3) as output
+                                //DDRD |= (1 << PD3);
+                                DDRD  |= (1 << DDD3);
+                                PORTD |= (1 << PORTD3);
                                 
                                 OCR2A = _timer.cmp_val;//set cmp value
 			        break;
