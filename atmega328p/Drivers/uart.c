@@ -17,7 +17,8 @@
 */
 //
 
-void init( struct uart _uart ) {
+//UART INIT IMPL
+void init( struct uart_config _uart ) {
      UCSR0A = 0; //clear 
      UCSR0B = 0; //clear
      UCSR0C = 0; //clear
@@ -42,7 +43,7 @@ void init( struct uart _uart ) {
      else ubrr_value = F_CPU / 8 / _uart.baud_rate - 1;
      
      //Set baud rate 
-     UBRR0H = (uint8_t)(ubrr >> 8);
+     UBRR0H = (uint8_t)( ubrr >> 8 );
      UBRR0L = (uint8_t) ubrr;
      
      // Set RX & TX enable
@@ -50,6 +51,8 @@ void init( struct uart _uart ) {
      
      //set frame_format
      switch( _uart.frame_format ) {
+        case  0: //5 + 1bit_stop
+        	 break;
         case  1: UCSR0C |= ~(1 << USBS0) | ~(1 << UCSZ02)  | ~(1 << UCSZ01) | (1 << UCSZ00);
         	 break;
         case  2: UCSR0C |= ~(1 << USBS0) | ~(1 << UCSZ02)  | (1 << UCSZ01) | ~(1 << UCSZ00);
@@ -70,16 +73,78 @@ void init( struct uart _uart ) {
        		 break;
      }
      
+     //set parity
+     switch(_uart.parity){
+     	case 0: //NO PARITY CHECK
+    		break;
+    	case 1: //ODD PARITY CHECK
+    		UCSR0C |= (1 << UPM01);
+    		break;
+    	case 2: //EVEN PARITY CHECK
+    	        UCSR0C |= ( 1 << UPM01) | (1 << UPM00);
+    		break;
+     }
+     
+     //enable global interruption
+     sie();
 }
 
-void transmit( uint32_t _data ) {
-
+//UART TRANSMIT IMPL
+void transmit( uint8_t _data ) {
+   // Wait for empty transmit buffer 
+   while (!(UCSR0A & (1 << UDRE0)));
+   
+   //check if we have frames with 9 data bits 
+   if(UCSZ02 && UCSZ01 && UCSZ00 ) {
+   	UCSR0B &= ~( 1 << TXB80);
+   	if(data & 0x0100) UCSR0B |= (1 << TXB80);
+   }
+   
+   // Put data into buffer, sends the data 
+   UDR0 = _data;
 }
 
-uint32_t receive( void ) {
+//UART RECEIVE IMPL
+uint8_t receive( void ) {
+    while (!(UCSR0A & (1 << RXC0))); // wait for data to be received
+    
+    //check if we have frames with 9 data bits 
+    if(UCSZ02 && UCSZ01 && UCSZ00 ) {
+          uint8_t status;
+          uint8_t resh;
+          uint8_t resl;
+          
+	 // Get status and 9th bit, then data from buffer 
+	 status = UCSR0A;
+	 resh = UCSR0B;
+	 resl = UDR0;
+	 
+	 /* If error, return -1 */
+	 if (status & (1<<FE0)|(1<<DOR0)|(1<<UPE0)) return -1;
+	 
+	 /* Filter the 9th bit, then return */
+	 resh = (resh >> 1) & 0x01;
+	 return ((resh << 8) | resl);
+    } 
+    
+    return UDR0; //read data 
+}
+
+//UART FLUSH IMPL
+void flush( void ){
 
 }
 
 struct uart* create( struct uart_config _conf ) {
-
+   struct uart uart;
+   uart.conf       = _conf;
+   uart.uart_init  = &init;
+   uart.uart_tx    = &transmit;
+   uart.uart_rx    = &receive;
+   uart.uart_flush = &flush;
+   
+   return &uart;
 }
+
+
+
