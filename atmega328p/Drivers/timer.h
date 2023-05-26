@@ -14,7 +14,7 @@ struct timer{
 	void (*init)(struct timer);
 };
 
-void init_timer(struct timer _timer);
+//void init_timer(struct timer _timer);
 void drive_timer(void (*timer_stuff)());
 
 struct timer* create(struct timer_config _conf);

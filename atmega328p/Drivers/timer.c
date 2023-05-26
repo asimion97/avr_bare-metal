@@ -62,7 +62,7 @@ void init_timer(struct timer _timer){
 		TCCR2B = 0; //clear
 		TIMSK2 = 0; //clear
 		TIFR2  = 0; //clear
-
+ 
 		// select prescaler
 		if(_timer.prescaler_frq == 5)       TCCR2B |= (1 << CS22) | (1 << CS20);
 		else if(_timer.prescaler_frq == 4)  TCCR2B |= (1 << CS22);
