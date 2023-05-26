@@ -10,9 +10,9 @@ struct uart_config{
 
 struct uart{
      struct uart_config conf;
-     void     (*uart_init)(struct uart);  
-     void     (*uart_tx)(uint32_t);
-     uint32_t (*uart_rx)(void);
+     void     (*uart_init)( struct uart );  
+     void     (*uart_tx)( uint32_t) ;
+     uint32_t (*uart_rx)( void );
 };
 
 struct uart* create( struct uart_config _conf );
