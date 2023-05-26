@@ -1,18 +1,20 @@
-#include <avr/io.h>
-#include <util/delay.h>
+#include "Drivers/uart.h"
 
 int main(void) {
-    // Set Output Port
-    DDRB |= (1 << PB5);
-
-    while (1) {
-        // ON LED
-        PORTB |= (1 << PB5);
-        _delay_ms(500);
-
-        // OFF LED
-        PORTB &= ~(1 << PB5);
-        _delay_ms(500);
+    struct uart_config uart_conf;
+    uart_conf.baud_rate = 9600;
+    uart_conf.frame_format = 3;
+    uart_conf.sync = 0;
+    uart_conf.double_speed = 0;
+    uart_conf.multi_proc_comm_mode = 0;
+    uart_conf.parity  = 1;
+    
+    struct uart* uart0 = create(uart_conf);
+    uart0->init(uart_conf);
+    
+    while(1){
+    	uart0->uart_tx('A');
+    	
     }
 
     return 0;
