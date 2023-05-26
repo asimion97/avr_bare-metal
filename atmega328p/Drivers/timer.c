@@ -29,9 +29,6 @@ void init_timer(struct timer _timer){
 				break;
 			case 1: //PWM Phase Correct classic mode
 			        // PD6 (OC0A): output PWM for Timer0, ch A.
-			        // PD5 (OC0B): output PWM for Timer0, ch B.
-                                // PB1 (OC1A): output PWM for Timer1, ch A.
-                                // PB2 (OC1B): output PWM for Timer1, ch B.
 			        TCCR0A |= (1 << WGM00); // set pwm phase correct mode
 			        
 			        // Clear OC0A on compare match when up-counting. 
@@ -80,8 +77,7 @@ void init_timer(struct timer _timer){
 				OCR2A  = TOP; //cmp val is TOP 
 				break;
 			case 1: //PWM Phase Correct classic mode
-                                // PB1 (OC2A): output PWM for Timer2, ch A.
-                                // PB2 (OC2B): output PWM for Timer2, ch B.
+                                // PD3 (OC2A): output PWM for Timer2, ch A.
 			        TCCR2A |= (1 << WGM20); // set pwm phase correct mode
 			        
 			        // Clear OC0A on compare match when up-counting. 
