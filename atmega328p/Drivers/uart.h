@@ -1,4 +1,5 @@
 #pragma once
+#include<stdint.h>
 
 struct uart_config{
      uint16_t baud_rate;

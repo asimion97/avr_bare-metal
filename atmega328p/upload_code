@@ -1,0 +1,3 @@
+#!/bin/bash
+hex_code=$1
+avrdude -p atmega328p -c arduino -P /dev/ttyUSB0 -b 57600 -U flash:w:${hex_code}

@@ -1,5 +1,7 @@
 #include "uart.h"
 #include<avr/io.h>
+#include<avr/interrupt.h>
+#include<stdlib.h>
 
 //frame format:
 /*    USBS0   UCSZ02   UCSZ01   UCSZ00    
@@ -27,8 +29,8 @@ void init( struct uart_config _uart ) {
      
      //enable Sync Recv Transmit
      if(_uart.sync) { 
-        UCSR0C |=  (1 << UMSELn0);
-        UCSR0C |= ~(1 << UMSELn1);
+        UCSR0C |=  (1 << UMSEL00);
+        UCSR0C |= ~(1 << UMSEL01);
         //enable double speed 
         if(_uart.double_speed) UCSR0A |= (1 << U2X0);
      }
@@ -43,8 +45,8 @@ void init( struct uart_config _uart ) {
      else ubrr_value = F_CPU / 8 / _uart.baud_rate - 1;
      
      //Set baud rate 
-     UBRR0H = (uint8_t)( ubrr >> 8 );
-     UBRR0L = (uint8_t) ubrr;
+     UBRR0H = (uint8_t)( ubrr_value >> 8 );
+     UBRR0L = (uint8_t) ubrr_value;
      
      // Set RX & TX enable
      UCSR0B |= (1 << TXEN0) | (1 << RXEN0); 
@@ -86,7 +88,7 @@ void init( struct uart_config _uart ) {
      }
      
      //enable global interruption
-     sie();
+     sei();
 }
 
 //UART TRANSMIT IMPL
@@ -97,7 +99,7 @@ void transmit( uint8_t _data ) {
    //check if we have frames with 9 data bits 
    if(UCSZ02 && UCSZ01 && UCSZ00 ) {
    	UCSR0B &= ~( 1 << TXB80);
-   	if(data & 0x0100) UCSR0B |= (1 << TXB80);
+   	if(_data & 0x0100) UCSR0B |= (1 << TXB80);
    }
    
    // Put data into buffer, sends the data 
@@ -120,7 +122,7 @@ uint8_t receive( void ) {
 	 resl = UDR0;
 	 
 	 /* If error, return -1 */
-	 if (status & (1<<FE0)|(1<<DOR0)|(1<<UPE0)) return -1;
+	 if (status & (1 << FE0)|(1 << DOR0)|(1 << UPE0)) return -1;
 	 
 	 /* Filter the 9th bit, then return */
 	 resh = (resh >> 1) & 0x01;
@@ -136,14 +138,14 @@ void flush( void ){
 }
 
 struct uart* create( struct uart_config _conf ) {
-   struct uart uart;
-   uart.conf       = _conf;
-   uart.uart_init  = &init;
-   uart.uart_tx    = &transmit;
-   uart.uart_rx    = &receive;
-   uart.uart_flush = &flush;
+   struct uart* uart = (struct uart*)malloc(sizeof(struct uart));
+   uart->conf       = _conf;
+   uart->uart_init  = &init;
+   uart->uart_tx    = &transmit;
+   uart->uart_rx    = &receive;
+   uart->uart_flush = &flush;
    
-   return &uart;
+   return uart;
 }
 
 

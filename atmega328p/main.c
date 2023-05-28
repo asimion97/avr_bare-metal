@@ -1,3 +1,4 @@
+//avr-objcopy -O ihex AVR_PRJ_bare-metal uart_driver.hex     
 #include "Drivers/uart.h"
 
 int main(void) {
@@ -10,13 +11,13 @@ int main(void) {
     uart_conf.parity  = 1;
     
     struct uart* uart0 = create(uart_conf);
-    uart0->init(uart_conf);
+    uart0->uart_init(uart_conf);
     
     while(1){
     	uart0->uart_tx('A');
     	
     }
-
+    
     return 0;
 }
 
