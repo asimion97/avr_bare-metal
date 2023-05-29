@@ -1,8 +1,6 @@
 #include "uart.h"
-#include<avr/io.h>
-#include<avr/interrupt.h>
-#include<stdlib.h>
 
+#define OSC_CPU 16000000UL
 //frame format:
 /*    USBS0   UCSZ02   UCSZ01   UCSZ00    
 	0       0        0        0          5 + 1bit_stop      0 
@@ -41,37 +39,37 @@ void init( struct uart_config _uart ) {
      }
      
      //compute baudrate 
-     if ( ~(U2X0) )  ubrr_value = F_CPU / 16 / _uart.baud_rate  - 1;
-     else ubrr_value = F_CPU / 8 / _uart.baud_rate - 1;
+    if ( _uart.double_speed == 0 ) ubrr_value = OSC_CPU / 16 / _uart.baud_rate  - 1;
+    else ubrr_value = OSC_CPU / 8 / _uart.baud_rate - 1;
      
      //Set baud rate 
      UBRR0H = (uint8_t)( ubrr_value >> 8 );
      UBRR0L = (uint8_t) ubrr_value;
      
      // Set RX & TX enable
-     UCSR0B |= (1 << TXEN0) | (1 << RXEN0); 
+     UCSR0B = (1 << TXEN0) | (1 << RXEN0); 
      
      //set frame_format
      switch( _uart.frame_format ) {
         case  0: //5 + 1bit_stop
         	 break;
-        case  1: UCSR0C |= ~(1 << USBS0) | ~(1 << UCSZ02)  | ~(1 << UCSZ01) | (1 << UCSZ00);
+        case  1: UCSR0C =  (1 << UCSZ00);
         	 break;
-        case  2: UCSR0C |= ~(1 << USBS0) | ~(1 << UCSZ02)  | (1 << UCSZ01) | ~(1 << UCSZ00);
+        case  2: UCSR0C =  (1 << UCSZ01);
         	 break;
-        case  3: UCSR0C |= ~(1 << USBS0) | ~(1 << UCSZ02)  | (1 << UCSZ01) |  (1 << UCSZ00);
+        case  3: UCSR0C =  (1 << UCSZ01) |  (1 << UCSZ00);
         	 break;
-        case  7: UCSR0C |= ~(1 << USBS0) |  (1 << UCSZ02)  | (1 << UCSZ01) |  (1 << UCSZ00);
+        case  7: UCSR0C =  (1 << UCSZ02) | (1 << UCSZ01) |  (1 << UCSZ00);
         	 break;
-        case  8: UCSR0C |=  (1 << USBS0) | ~(1 << UCSZ02)  | ~(1 << UCSZ01) | (1 << UCSZ00);
+        case  8: UCSR0C =  (1 << USBS0);
         	 break;
-        case  9: UCSR0C |=  (1 << USBS0) | ~(1 << UCSZ02)  | ~(1 << UCSZ01) | (1 << UCSZ00);
+        case  9: UCSR0C =  (1 << USBS0) |  (1 << UCSZ00);
         	 break;
-        case 10: UCSR0C |=  (1 << USBS0) | ~(1 << UCSZ02)  |  (1 << UCSZ01) | ~(1 << UCSZ00);
+        case 10: UCSR0C =  (1 << USBS0) |  (1 << UCSZ01);
         	 break;
-        case 11: UCSR0C |=  (1 << USBS0) | ~(1 << UCSZ02)  |  (1 << UCSZ01) |  (1 << UCSZ00);
+        case 11: UCSR0C =  (1 << USBS0) |  (1 << UCSZ01) |  (1 << UCSZ00);
       	         break;
-        case 15: UCSR0C |=  (1 << USBS0) |  (1 << UCSZ02)  |  (1 << UCSZ01) |  (1 << UCSZ00);
+        case 15: UCSR0C =  (1 << USBS0) |  (1 << UCSZ02)  |  (1 << UCSZ01) |  (1 << UCSZ00);
        		 break;
      }
      
@@ -80,10 +78,10 @@ void init( struct uart_config _uart ) {
      	case 0: //NO PARITY CHECK
     		break;
     	case 1: //ODD PARITY CHECK
-    		UCSR0C |= (1 << UPM01);
+    		UCSR0C = (1 << UPM01);
     		break;
     	case 2: //EVEN PARITY CHECK
-    	        UCSR0C |= ( 1 << UPM01) | (1 << UPM00);
+    	        UCSR0C = ( 1 << UPM01) | (1 << UPM00);
     		break;
      }
      
@@ -92,7 +90,7 @@ void init( struct uart_config _uart ) {
 }
 
 //UART TRANSMIT IMPL
-void transmit( uint8_t _data ) {
+void transmit( unsigned char _data ) {
    // Wait for empty transmit buffer 
    while (!(UCSR0A & (1 << UDRE0)));
    

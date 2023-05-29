@@ -1,6 +1,9 @@
 #pragma once
 #include<stdint.h>
-
+#include<avr/io.h>
+#include<avr/interrupt.h>
+#include<util/delay.h>
+#include<stdlib.h>
 struct uart_config{
      uint16_t baud_rate;
      uint8_t  frame_format;
@@ -13,7 +16,7 @@ struct uart_config{
 struct uart{
      struct uart_config conf;
      void     (*uart_init)( struct uart_config );  
-     void     (*uart_tx)( uint8_t) ;
+     void     (*uart_tx)( unsigned char) ;
      uint8_t  (*uart_rx)( void );
      void     (*uart_flush)(void);
 };

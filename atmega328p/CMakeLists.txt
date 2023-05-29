@@ -40,3 +40,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 # Generate Makefile
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Generate .hex file
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND avr-objcopy -O ihex
+    ${BUILD_DIR}/${PROJECT_NAME} ${BUILD_DIR}/${PROJECT_NAME}.hex
+    COMMENT "Generating .hex file"
+)
