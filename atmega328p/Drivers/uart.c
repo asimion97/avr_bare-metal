@@ -26,21 +26,23 @@ void init( struct uart_config _uart ) {
      uint16_t ubrr_value = 0;
      
      //enable Sync Recv Transmit
-     if(_uart.sync) { 
+     if(_uart.sync && _uart.double_speed == 0) { 
         UCSR0C |=  (1 << UMSEL00);
-        UCSR0C |= ~(1 << UMSEL01);
-        //enable double speed 
-        if(_uart.double_speed) UCSR0A |= (1 << U2X0);
+        UCSR0C |=  (0 << UMSEL01);
+        ubrr_value = OSC_CPU / 2 / _uart.baud_rate - 1;
+     } else if ( !(_uart.sync) &&  _uart.double_speed ) {
+        UCSR0A |= (1 << U2X0);
+        ubrr_value = OSC_CPU / 8 / _uart.baud_rate - 1;
+     } else if (!(_uart.sync) && !(_uart.double_speed)) {
+     	ubrr_value = OSC_CPU / 16 / _uart.baud_rate  - 1;
+     } else { //default
+     	ubrr_value = OSC_CPU / 16 / _uart.baud_rate  - 1;
      }
      
      //enable  Multi-processor Communication Mode
      if(_uart.multi_proc_comm_mode){
      	UCSR0A |= (1 << MPCM0);
      }
-     
-     //compute baudrate 
-    if ( _uart.double_speed == 0 ) ubrr_value = OSC_CPU / 16 / _uart.baud_rate  - 1;
-    else ubrr_value = OSC_CPU / 8 / _uart.baud_rate - 1;
      
      //Set baud rate 
      UBRR0H = (uint8_t)( ubrr_value >> 8 );
@@ -52,35 +54,36 @@ void init( struct uart_config _uart ) {
      //set frame_format
      switch( _uart.frame_format ) {
         case  0: //5 + 1bit_stop
+                 UCSR0C =  (0 << USBS0) | (0 << UCSZ02) | (0 << UCSZ01) |  (0 << UCSZ00);
         	 break;
-        case  1: UCSR0C =  (1 << UCSZ00);
+        case  1: UCSR0C =  (0 << USBS0) | (0 << UCSZ02) | (0 << UCSZ01) |  (1 << UCSZ00);
         	 break;
-        case  2: UCSR0C =  (1 << UCSZ01);
+        case  2: UCSR0C =  (0 << USBS0) | (0 << UCSZ02) | (1 << UCSZ01) |  (0 << UCSZ00);
         	 break;
-        case  3: UCSR0C =  (1 << UCSZ01) |  (1 << UCSZ00);
+        case  3: UCSR0C =  (0 << USBS0) | (0 << UCSZ02) | (1 << UCSZ01) |  (1 << UCSZ00);
         	 break;
-        case  7: UCSR0C =  (1 << UCSZ02) | (1 << UCSZ01) |  (1 << UCSZ00);
+        case  7: UCSR0C =  (0 << USBS0) | (1 << UCSZ02) | (1 << UCSZ01) |  (1 << UCSZ00);
         	 break;
-        case  8: UCSR0C =  (1 << USBS0);
+        case  8: UCSR0C =  (1 << USBS0) | (0 << UCSZ02) | (0 << UCSZ01) |  (0 << UCSZ00);
         	 break;
-        case  9: UCSR0C =  (1 << USBS0) |  (1 << UCSZ00);
+        case  9: UCSR0C =  (1 << USBS0) | (0 << UCSZ02) | (0 << UCSZ01) |  (1 << UCSZ00);
         	 break;
-        case 10: UCSR0C =  (1 << USBS0) |  (1 << UCSZ01);
+        case 10: UCSR0C =  (1 << USBS0) | (0 << UCSZ02) | (1 << UCSZ01) |  (0 << UCSZ00);
         	 break;
-        case 11: UCSR0C =  (1 << USBS0) |  (1 << UCSZ01) |  (1 << UCSZ00);
+        case 11: UCSR0C =  (1 << USBS0) | (0 << UCSZ02) | (1 << UCSZ01) |  (1 << UCSZ00);
       	         break;
-        case 15: UCSR0C =  (1 << USBS0) |  (1 << UCSZ02)  |  (1 << UCSZ01) |  (1 << UCSZ00);
+        case 15: UCSR0C =  (1 << USBS0) | (1 << UCSZ02) | (1 << UCSZ01) |  (1 << UCSZ00);
        		 break;
      }
-     
+          
      //set parity
      switch(_uart.parity){
-     	case 0: //NO PARITY CHECK
+     	case 0: UCSR0C = (0 << UPM01) | (0 << UPM00);
     		break;
-    	case 1: //ODD PARITY CHECK
-    		UCSR0C = (1 << UPM01);
+    	case 1: //Even PARITY CHECK
+    		UCSR0C = (1 << UPM01) | (0 << UPM00);
     		break;
-    	case 2: //EVEN PARITY CHECK
+    	case 2: //ODD PARITY CHECK
     	        UCSR0C = ( 1 << UPM01) | (1 << UPM00);
     		break;
      }
@@ -145,6 +148,4 @@ struct uart* create( struct uart_config _conf ) {
    
    return uart;
 }
-
-
 
