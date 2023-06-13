@@ -1,5 +1,7 @@
 //avr-objcopy -O ihex AVR_PRJ_bare-metal uart_driver.hex     
 #include "Drivers/uart.h"
+#include "Drivers/i2c.h"
+
 #include <stdlib.h>
 
 int main(void) {
@@ -15,16 +17,19 @@ int main(void) {
     struct uart* uart0 = create(&uart_conf);
     uart0->uart_init(uart0->conf);
     
-    while(1){
-	    uart0->uart_tx(48);
-	    _delay_ms(1000);
-	    uart0->uart_tx(49);
-	    _delay_ms(1000);
-	    uart0->uart_tx(50);
-	    _delay_ms(1000);
-    }
+    struct i2c_config i2c_conf;
+    i2c_conf.mode = 0x01;//master mode
+    i2c_conf.prescaler = 0x00;//no prescaling
+    
+    struct i2c* i2c0 = construct_i2c();
+    i2c0->init();
+    uint8_t saddr = scan_i2c_slave();
+    
+    uart0->uart_tx(saddr);
+    
     free(uart0);
-   
+    free(i2c0);
+    
     return 0;
 }
 
