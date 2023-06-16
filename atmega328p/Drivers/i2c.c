@@ -2,48 +2,36 @@
 
 /////////////////AUX FUNCT FOR TRANSMISSION ////////////////////////////////////
 uint8_t _start_transmission(uint8_t _dest_addr, uint8_t direction) {
-    //TWCR &= ~(1 << TWSTO);
-    //TWCR |= (1 << TWSTA) ; // The application writes the TWSTA bit to one when it desires to become a master on the 2-wire serial bus.
-   // TWCR |= (1<<TWINT);
-     TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);
-    uint8_t twcr = TWCR;
-    Serial.println(twcr);
-    
+    TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);//init start transmission
+
     while (!(TWCR & (1 << TWINT)));
     
-    //Serial.println("Start sent");
-    
     if ((TWSR & MASK_TWSR) != TW_START) return TW_BUS_ERROR;
-    //Serial.println("Start ACK");
      
-    TWDR |= ( _dest_addr << 1 ) | direction;
+    TWDR = (( _dest_addr << 1 ) | direction);
     TWCR = (1 << TWINT) | (1 << TWEN);
     
     while (!(TWCR & (1 << TWINT)));
-    //Serial.println("ADDR sent");
     
     if ((TWSR & MASK_TWSR) != TW_MT_SLA_ACK) return TW_BUS_ERROR;
-    //Serial.println("OK");
+        
     return I2C_OK;
 }
 
 uint8_t _transmission(uint8_t _data) {
-
 	TWDR = _data;
+	
+	TWCR = (1<<TWINT) | (1<<TWEN);
 	
 	while (!(TWCR & (1 << TWINT)));
 	
 	if ((TWSR & MASK_TWSR)!= TW_MT_DATA_ACK) return TW_BUS_ERROR;
 	
 	return I2C_OK;
-	
 }
 
 void _stop_transmission() {
-        //TWCR |=  (1 << TWINT);
-	//TWCR &= ~(1 << TWSTA);
-	//TWCR |=  (1 << TWSTO);
-	TWCR = (1<<TWINT)|(1<<TWEN)| (1<<TWSTO);
+	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
 }
 
 ////////////////AUX FUNC FOR RECEPTION///////////////////////////////////////////
@@ -150,18 +138,16 @@ struct i2c* construct_i2c() {
 uint8_t scan_i2c_slave() {
 	uint8_t addr = 0xff;
 	for(uint8_t addr_i = 0x01 ; addr_i < 0x7f; addr_i++){
-	    Serial.print(addr_i);
-	    Serial.print(" ");
-	    uint8_t status = _start_transmission(addr_i, RX_BIT);
+	    uint8_t status = _start_transmission(addr_i, TX_BIT);
 	    
 	    if(status == I2C_OK) 
-	    {Serial.println(status);
+	    {
 	    	addr = addr_i;
 	    	_stop_transmission();
 	    	break;
 	    }
 	    _stop_transmission();
-	    delay(1000);	    
+	    delay(1000);
 	}
 	return addr;
 }
