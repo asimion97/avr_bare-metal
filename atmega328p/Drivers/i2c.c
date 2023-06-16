@@ -11,19 +11,19 @@ uint8_t _start_transmission(uint8_t _dest_addr, uint8_t direction) {
     
     while (!(TWCR & (1 << TWINT)));
     
-    Serial.println("Start sent");
+    //Serial.println("Start sent");
     
     if ((TWSR & MASK_TWSR) != TW_START) return TW_BUS_ERROR;
-    Serial.println("Start ACK");
+    //Serial.println("Start ACK");
      
     TWDR |= ( _dest_addr << 1 ) | direction;
     TWCR = (1 << TWINT) | (1 << TWEN);
     
     while (!(TWCR & (1 << TWINT)));
-    Serial.println("ADDR sent");
+    //Serial.println("ADDR sent");
     
     if ((TWSR & MASK_TWSR) != TW_MT_SLA_ACK) return TW_BUS_ERROR;
-    Serial.println("OK");
+    //Serial.println("OK");
     return I2C_OK;
 }
 
@@ -78,7 +78,7 @@ void init(struct i2c_config *_conf) {
     //set TWAR to default value
     TWAR |= 0xff;
     
-    //enble I2C + interrupts
+    //enble I2C
     TWCR |= (1 << TWEN);
     
     if( _conf->mode == 0x01 ) { 
