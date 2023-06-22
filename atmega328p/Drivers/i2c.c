@@ -9,46 +9,49 @@ uint8_t _start_transmission(uint8_t _dest_addr, uint8_t direction) {
     if ((TWSR & MASK_TWSR) != TW_START) return TW_BUS_ERROR;
      
     TWDR = (( _dest_addr << 1 ) | direction);
+    
     TWCR = (1 << TWINT) | (1 << TWEN);
     
     while (!(TWCR & (1 << TWINT)));
     
-    if ((TWSR & MASK_TWSR) != TW_MT_SLA_ACK) return TW_BUS_ERROR;
-        
-    return I2C_OK;
+    if( !direction ) {
+       if ((TWSR & MASK_TWSR) != TW_MT_SLA_ACK) return TW_BUS_ERROR;
+     } else { 
+       if ((TWSR & MASK_TWSR) != TW_MR_SLA_ACK) return TW_BUS_ERROR;  
+     }
+       
+    return I2C_TOK;
 }
 
 uint8_t _transmission(uint8_t _data) {
 	TWDR = _data;
 	
-	TWCR = (1<<TWINT) | (1<<TWEN);
+	TWCR = (1 << TWINT) | (1 << TWEN);
 	
 	while (!(TWCR & (1 << TWINT)));
 	
-	if ((TWSR & MASK_TWSR)!= TW_MT_DATA_ACK) return TW_BUS_ERROR;
+	if ((TWSR & MASK_TWSR) != TW_MT_DATA_ACK) return TW_BUS_ERROR;
 	
-	return I2C_OK;
+	return I2C_DOK;
 }
 
 void _stop_transmission() {
-	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
 }
 
 ////////////////AUX FUNC FOR RECEPTION///////////////////////////////////////////
 uint8_t _reception() {
     uint8_t data_rx;
 	
-	data_rx = TWDR;
+    data_rx = TWDR;
+    
+	TWCR = (1 << TWINT) | (1 << TWEN);
+    
+    while (!(TWCR & (1 << TWINT)));
 	
-	while (!(TWCR & (1 << TWINT)));
+    if ((TWSR & MASK_TWSR)!= TW_MR_DATA_ACK) TW_BUS_ERROR;
 	
-	if ((TWSR & MASK_TWSR)!= TW_MT_DATA_ACK) TW_BUS_ERROR;
-	
-	return data_rx;
-}
-
-void _stop_reception() {
-	
+    return data_rx;
 }
 
 ///////////////////// I2C init fct //////////////////////////////////////////////
@@ -69,10 +72,17 @@ void init(struct i2c_config *_conf) {
     //enble I2C
     TWCR |= (1 << TWEN);
     
-    if( _conf->mode == 0x01 ) { 
+    if( _conf->mode == MT_MODE ) { 
         //Master transmiter
 	//set prescaler
-    	if( _conf->prescaler > 0 ) TWSR |= ( _conf->prescaler << TWPS0 );
+    	if( _conf->prescaler > 0 ) { 
+    	  TWSR |= ( _conf->prescaler << TWPS0 );
+          switch(_conf->prescaler){
+             case 1: psclr_v = 4; break;
+             case 2: psclr_v = 16; break;
+             case 3: psclr_v = 64; break;
+          } 
+	}
 	
 	//set I2C bit rate
 	TWBR |= ((OSC_FRQ / SCL_FRQ) - 16) / (2 * psclr_v);
@@ -80,7 +90,7 @@ void init(struct i2c_config *_conf) {
 	DDRC |= (1 << DDC4); // set pin SDA out
 	DDRC |= (1 << DDC5); // set pin SCL out
 	
-    } else if ( _conf->mode == 0x02 ) {
+    } else if ( _conf->mode == SR_MODE ) {
 	//Slave receptor
 	//set slave addr
 	//TWAR = ( _conf->slave_addr << 1 );
@@ -98,30 +108,30 @@ void init(struct i2c_config *_conf) {
 
 //////////// I2C master transmission func ////////////////////////////////////////
 void master_TX(uint8_t slave_addr, uint8_t data) {
-         _start_transmission(slave_addr, TX_BIT);
+    _start_transmission(slave_addr, TX_BIT);
           
-         _transmission(data);
+    _transmission(data);
      
-         _stop_transmission();
+    _stop_transmission();
 }
 
 void master_TX_Nbytes(uint8_t slave_addr, uint8_t* data, uint8_t n_bytes) {
-         _start_transmission(slave_addr, TX_BIT);
+    _start_transmission(slave_addr, TX_BIT);
           
-          for(int i = 0; i < n_bytes; i++) _transmission(*(data + i));
+    for(int i = 0; i < n_bytes; i++) _transmission(*(data + i));
      
-         _stop_transmission();
+    _stop_transmission();
 }
 
 //////////// I2C master reception func //////////////////////////////////////////
 uint8_t master_RX(uint8_t slave_addr) {
-     _start_transmission(slave_addr, RX_BIT);
+    _start_transmission(slave_addr, RX_BIT);
      
-	 uint8_t i2c_rx = _reception();
+    uint8_t i2c_rx = _reception();
+     
+    _stop_transmission();
 	 
-	 _stop_transmission();
-	 
-	 return i2c_rx;
+    return i2c_rx;
 }
 
 ///////////////// CONSTRUCT I2C Structure ///////////////////////////////////////
@@ -135,19 +145,39 @@ struct i2c* construct_i2c() {
 }
 
 ///////////////// SCANNER I2C Slave ///////////////////////////////////////
-uint8_t scan_i2c_slave() {
-	uint8_t addr = 0xff;
+uint8_t get_first_addr_i2c_slave() {
+	uint8_t addr = 0x00;
+	
 	for(uint8_t addr_i = 0x01 ; addr_i < 0x7f; addr_i++){
 	    uint8_t status = _start_transmission(addr_i, TX_BIT);
 	    
-	    if(status == I2C_OK) 
+	    if(status == I2C_TOK) 
 	    {
 	    	addr = addr_i;
 	    	_stop_transmission();
 	    	break;
 	    }
+	    
 	    _stop_transmission();
 	    delay(1000);
+	}
+	return addr;
+}
+
+uint8_t* get_all_addr_i2c_slave() {
+	uint8_t* addr = (uint8_t*)malloc(sizeof(uint8_t) * 0x7f);
+	uint8_t cnt = 0;
+	
+	for(uint8_t addr_i = 0x01 ; addr_i < 0x7f; addr_i++){
+	    uint8_t status = _start_transmission(addr_i, TX_BIT);
+	    
+	    if(status == I2C_TOK) {
+	    	addr[cnt++] = addr_i;
+	    } else { 
+	        addr[cnt++] = 0x00;
+	    }
+	    
+	    _stop_transmission();
 	}
 	return addr;
 }
