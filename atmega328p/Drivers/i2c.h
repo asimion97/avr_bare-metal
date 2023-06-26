@@ -21,7 +21,7 @@
 #define ST_MODE         0x04 // slave transmitter 
 
 struct i2c_config {
-    //Mode: Master Transmitter(0x01), Ma or Slave(0x02)
+    //Mode: Master Transmitter(0x01), Master Receiver, Slave Transmitter or Slave Receiver(0x02)
 	uint8_t mode;
 	//Prescaler: division (00 ,01 ,10 ,11)
 	uint8_t prescaler;

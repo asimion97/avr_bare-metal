@@ -39,18 +39,20 @@ void _stop_transmission() {
 	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
 }
 
-////////////////AUX FUNC FOR RECEPTION -- TODO:fix ///////////////////////////////////////////
+////////////////AUX FUNC FOR RECEPTION -- TODO: check if it's work ///////////////////////////////////////////
 uint8_t _reception(uint8_t *data_rx) {
     //uint8_t data_rx;
 	DDRC &= ~(1 << DDC4); // set pin SDA in
-	
-    (*data_rx) = TWDR;
     
 	TWCR = (1 << TWINT) | (1 << TWEN);
     
     while (!(TWCR & (1 << TWINT)));
 	
     if ((TWSR & MASK_TWSR)!= TW_MR_DATA_ACK) return TW_BUS_ERROR;
+    
+    (*data_rx) = TWDR; // read data after TWSR is Checked
+    
+    DDRC |= (1 << DDC4); // set pin SDA out
 	
     return I2C_DOK;
 }
@@ -93,7 +95,7 @@ void init(struct i2c_config *_conf) {
 	    DDRC |= (1 << DDC4); // set pin SDA out
 	    DDRC |= (1 << DDC5); // set pin SCL out
 	
-    } else if ( _conf->mode == SR_MODE ) {
+    } else if ( _conf->mode == SR_MODE || _conf->mode == ST_MODE ) {
 	    //Slave receptor
 	    //set slave addr
 	    //TWAR = ( _conf->slave_addr << 1 );
