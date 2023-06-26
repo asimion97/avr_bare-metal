@@ -1,6 +1,6 @@
 #include "i2c.h"
 
-/////////////////AUX FUNCT FOR TRANSMISSION ////////////////////////////////////
+/////////////////AUX FUNCT FOR TRANSMISSION //////////////////////////////////// 
 uint8_t _start_transmission(uint8_t _dest_addr, uint8_t direction) {
     TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);//init start transmission
 
