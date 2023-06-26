@@ -39,19 +39,20 @@ void _stop_transmission() {
 	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
 }
 
-////////////////AUX FUNC FOR RECEPTION///////////////////////////////////////////
-uint8_t _reception() {
-    uint8_t data_rx;
+////////////////AUX FUNC FOR RECEPTION -- TODO:fix ///////////////////////////////////////////
+uint8_t _reception(uint8_t *data_rx) {
+    //uint8_t data_rx;
+	DDRC &= ~(1 << DDC4); // set pin SDA in
 	
-    data_rx = TWDR;
+    (*data_rx) = TWDR;
     
 	TWCR = (1 << TWINT) | (1 << TWEN);
     
     while (!(TWCR & (1 << TWINT)));
 	
-    if ((TWSR & MASK_TWSR)!= TW_MR_DATA_ACK) TW_BUS_ERROR;
+    if ((TWSR & MASK_TWSR)!= TW_MR_DATA_ACK) return TW_BUS_ERROR;
 	
-    return data_rx;
+    return I2C_DOK;
 }
 
 ///////////////////// I2C init fct //////////////////////////////////////////////
@@ -72,33 +73,35 @@ void init(struct i2c_config *_conf) {
     //enble I2C
     TWCR |= (1 << TWEN);
     
-    if( _conf->mode == MT_MODE ) { 
-        //Master transmiter
-	//set prescaler
+    //compute prescaler value
+    switch(_conf->prescaler){
+      case 1: psclr_v = 4; break;
+      case 2: psclr_v = 16; break;
+      case 3: psclr_v = 64; break;
+    }    
+    
+    if( _conf->mode == MT_MODE || _conf->mode == MR_MODE ) { 
+        //Master transmiter + Master receptor
+	    //set prescaler
     	if( _conf->prescaler > 0 ) { 
-    	  TWSR |= ( _conf->prescaler << TWPS0 );
-          switch(_conf->prescaler){
-             case 1: psclr_v = 4; break;
-             case 2: psclr_v = 16; break;
-             case 3: psclr_v = 64; break;
-          } 
+    	  TWSR |= ( _conf->prescaler << TWPS0 ); 
 	}
 	
-	//set I2C bit rate
-	TWBR |= ((OSC_FRQ / SCL_FRQ) - 16) / (2 * psclr_v);
+	    //set I2C bit rate
+	    TWBR |= ((OSC_FRQ / SCL_FRQ) - 16) / (2 * psclr_v);
 	
-	DDRC |= (1 << DDC4); // set pin SDA out
-	DDRC |= (1 << DDC5); // set pin SCL out
+	    DDRC |= (1 << DDC4); // set pin SDA out
+	    DDRC |= (1 << DDC5); // set pin SCL out
 	
     } else if ( _conf->mode == SR_MODE ) {
-	//Slave receptor
-	//set slave addr
-	//TWAR = ( _conf->slave_addr << 1 );
-	TWAR |= _conf->slave_addr;
-	TWCR |= (1 << TWEA);
+	    //Slave receptor
+	    //set slave addr
+	    //TWAR = ( _conf->slave_addr << 1 );
+	    TWAR |= _conf->slave_addr;
+	    TWCR |= (1 << TWEA);
 	
-	DDRC &= ~(1 << DDC4); // set pin SDA in
-	DDRC &= ~(1 << DDC5); // set pin SCL in
+	    DDRC &= ~(1 << DDC4); // set pin SDA in
+	    DDRC &= ~(1 << DDC5); // set pin SCL in
     }
 	
     // Activ internal pull-up
@@ -125,13 +128,18 @@ void master_TX_Nbytes(uint8_t slave_addr, uint8_t* data, uint8_t n_bytes) {
 
 //////////// I2C master reception func //////////////////////////////////////////
 uint8_t master_RX(uint8_t slave_addr) {
-    _start_transmission(slave_addr, RX_BIT);
-     
-    uint8_t i2c_rx = _reception();
-     
+    uint8_t data;
+    uint8_t e = _start_transmission(slave_addr, RX_BIT);
+    
+    Serial.println(e);
+    
+    e = _reception(&data);
+    
+    Serial.println(e);
+    
     _stop_transmission();
 	 
-    return i2c_rx;
+    return data;
 }
 
 ///////////////// CONSTRUCT I2C Structure ///////////////////////////////////////

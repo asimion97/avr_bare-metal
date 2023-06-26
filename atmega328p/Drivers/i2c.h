@@ -36,7 +36,7 @@ struct i2c {
 	void    (*master_write)(uint8_t, uint8_t);
 	void    (*master_write_nbytes)(uint8_t, uint8_t*, uint8_t);
 	// Master Reception
-	uint8_t (*master_read)(void);       // read 8bit from slave
+	uint8_t (*master_read)(uint8_t);       // read 8bit from slave
 	//TODO: Slave Transmission
 	//void    (*slave_write)(uint8_t, uint8_t);
 	//TODO: Slave Reception
