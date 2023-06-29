@@ -12,6 +12,7 @@
 #define TX_BIT             0
 #define RX_BIT             1
 
+#define I2C_TSTO        0x08 // i2c master transmission stop
 #define I2C_TOK         0x06 // i2c transmission established OK
 #define I2C_DOK         0x07 // i2c transmission data OK
 
