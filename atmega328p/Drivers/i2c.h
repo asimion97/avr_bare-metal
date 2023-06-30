@@ -33,13 +33,18 @@ struct i2c_config {
 struct i2c {
     //Init
 	void    (*init)(struct i2c_config*);
-	// Master Transmission
+	
+	// Master Transmitter
 	void    (*master_write)(uint8_t, uint8_t);
 	void    (*master_write_nbytes)(uint8_t, uint8_t*, uint8_t);
-	// Master Reception
+	
+	// Master Receptor
 	uint8_t (*master_read)(uint8_t);       // read 8bit from slave
-	//TODO: Slave Transmission
-	//void    (*slave_write)(uint8_t, uint8_t);
+	
+    // Slave Trasmitter
+	void    (*slave_write)(uint8_t);
+	void    (*slave_write_nbytes)(uint8_t*, uint8_t);
+	
 	//TODO: Slave Reception
 	//uint8_t (*slave_read)(void);
 };

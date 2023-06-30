@@ -99,9 +99,8 @@ void init(struct i2c_config *_conf) {
     } else if ( _conf->mode == SR_MODE || _conf->mode == ST_MODE ) {
 	    //Slave receptor
 	    //set slave addr
-	    //TWAR = ( _conf->slave_addr << 1 );
-	    TWAR |= _conf->slave_addr;
-	    TWCR |= (1 << TWEA);
+	    TWAR |= (_conf->slave_addr << 1); 
+	    TWCR |= (1 << TWEA) | (1 << TWEN);
 	
 	    DDRC &= ~(1 << DDC4); // set pin SDA in
 	    DDRC &= ~(1 << DDC5); // set pin SCL in
@@ -145,6 +144,75 @@ uint8_t master_RX(uint8_t slave_addr) {
     return data;
 }
 
+//////////// I2C slave transmission func ////////////////////////////////////////
+void slave_TX(uint8_t data) {
+     
+    while (!(TWCR & (1 << TWINT))); // wait for complete
+    
+    switch(TWSR & MASK_TWSR) {
+    
+       case TW_ST_SLA_ACK  : {
+                               TWDR = data; //Data
+                               TWCR = (1 << TWINT) | (1 << TWEA); //send ACK
+                               break;
+                             }
+                             
+       case TW_ST_DATA_NACK: {
+                               TWCR &= ~(1 << TWEN);
+                               break;
+                             }
+                             
+       case TW_ST_LAST_DATA: {
+                               TWCR = (1 << TWINT); //send NACK
+                               break;
+                             }
+                             
+       case TW_ST_ARB_LOST_SLA_ACK: {
+                                      TWCR |= (1 << TWSTO) | (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
+                                      break;
+                                    }
+    }
+     
+}
+
+void slave_TX_Nbytes(uint8_t* data, uint8_t nbytes) {
+    
+    for(int i = 0; i < nbytes; i++) {
+    
+       while (!(TWCR & (1 << TWINT))); // wait for complete
+    
+       switch(TWSR & MASK_TWSR) {
+    
+          case TW_ST_SLA_ACK  : {
+                                  TWDR = data; //Data
+                                  TWCR = (1 << TWINT) | (1 << TWEA); //send ACK
+                                  break;
+                                }
+                             
+          case TW_STA_DATA_ACK: {
+                                  TWDR = data;
+                                  TWCR = (1 << TWINT) | (1 << TWEA); //send ACK
+                                  break;
+                                }                      
+                             
+          case TW_ST_DATA_NACK: {
+                                  TWCR &= ~(1 << TWEN); //disable I2C
+                                  break;
+                                }
+                             
+          case TW_ST_LAST_DATA: {
+                                  TWCR = (1 << TWINT); //send NACK
+                                  break;
+                                }
+                             
+          case TW_ST_ARB_LOST_SLA_ACK: {
+                                         TWCR |= (1 << TWSTO) | (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
+                                         break;
+                                       }
+       }
+    }
+}
+
 ///////////////// CONSTRUCT I2C Structure ///////////////////////////////////////
 struct i2c* construct_i2c() {
 	struct i2c* i2c_device   = (struct i2c*)malloc(sizeof(struct i2c));
@@ -152,6 +220,8 @@ struct i2c* construct_i2c() {
 	i2c_device->master_write        = &master_TX;
 	i2c_device->master_write_nbytes = &master_TX_Nbytes;
 	i2c_device->master_read         = &master_RX;
+	i2c_device->slave_write         = &slave_TX;
+	i2c_device->slave_write_nbytes  = &slave_TX_Nbytes;
 	return i2c_device;
 }
 
@@ -161,7 +231,7 @@ uint8_t get_first_addr_i2c_slave() {
 	
 	for(uint8_t addr_i = 0x01 ; addr_i < 0x7f; addr_i++){
 	    uint8_t status = _start_transmission(addr_i, TX_BIT);
-	    
+	    uint16_t delay = 3000;
 	    if(status == I2C_TOK) 
 	    {
 	    	addr = addr_i;
@@ -170,7 +240,7 @@ uint8_t get_first_addr_i2c_slave() {
 	    }
 	    
 	    _stop_transmission();
-	    delay(1000);
+	    while(delay--);
 	}
 	return addr;
 }
@@ -181,7 +251,7 @@ uint8_t* get_all_addr_i2c_slave() {
 	
 	for(uint8_t addr_i = 0x01 ; addr_i < 0x7f; addr_i++){
 	    uint8_t status = _start_transmission(addr_i, TX_BIT);
-	    
+	    uint16_t delay = 3000;
 	    if(status == I2C_TOK) {
 	    	addr[cnt++] = addr_i;
 	    } else { 
@@ -189,6 +259,7 @@ uint8_t* get_all_addr_i2c_slave() {
 	    }
 	    
 	    _stop_transmission();
+	    while(delay--);
 	}
 	return addr;
 }
