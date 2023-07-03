@@ -74,7 +74,7 @@ void init(struct i2c_config *_conf) {
     TWAR |= 0xff;
     
     //enble I2C
-    TWCR |= (1 << TWEN);
+    TWCR = (1 << TWEN);
     
     //compute prescaler value
     switch(_conf->prescaler){
@@ -97,10 +97,11 @@ void init(struct i2c_config *_conf) {
 	    DDRC |= (1 << DDC5); // set pin SCL out
 	
     } else if ( _conf->mode == SR_MODE || _conf->mode == ST_MODE ) {
+         Serial.println("Slave mode active");
 	    //Slave receptor
 	    //set slave addr
-	    TWAR |= (_conf->slave_addr << 1); 
-	    TWCR |= (1 << TWEA) | (1 << TWEN);
+	    TWAR = (_conf->slave_addr << 1); 
+	    TWCR |= (1 << TWEN) | (1 << TWEA);
 	
 	    DDRC &= ~(1 << DDC4); // set pin SDA in
 	    DDRC &= ~(1 << DDC5); // set pin SCL in
@@ -140,6 +141,39 @@ uint8_t master_RX(uint8_t slave_addr) {
     _stop_transmission();
      
     if(e != I2C_TSTO) return TW_BUS_ERROR; 
+    
+    return data;
+}
+
+//////////// I2C slave reception func ////////////////////////////////////////
+uint8_t slave_RX() {
+    uint8_t data;
+        
+    while (!(TWCR & (1 << TWINT))); // wait for complete
+    
+    switch(TWSR & MASK_TWSR) {
+    
+       case TW_SR_SLA_ACK  : break;
+       case TW_SR_GCALL_ACK  : {
+                               data = TWDR; //read 8b Data
+                               TWCR |= (1 << TWINT) | (1 << TWEA); //send ACK
+                               break;
+                             }
+                             
+       case TW_SR_ARB_LOST_SLA_ACK:
+       case TW_SR_ARB_LOST_GCALL_ACK: {
+                                        TWCR |= (1 << TWINT) | (1 << TWEA);
+                                        break;
+                                      }
+       case TW_SR_STOP: {
+                          TWCR |= (1 << TWINT) | (1 << TWEA);
+                          break;
+                        }
+       default: {
+                    TWCR |= (1 << TWINT) | (1 << TWEA);
+                    break;
+                }
+    }
     
     return data;
 }
@@ -189,7 +223,7 @@ void slave_TX_Nbytes(uint8_t* data, uint8_t nbytes) {
                                   break;
                                 }
                              
-          case TW_STA_DATA_ACK: {
+          case TW_ST_DATA_ACK: {
                                   TWDR = data;
                                   TWCR = (1 << TWINT) | (1 << TWEA); //send ACK
                                   break;
@@ -222,6 +256,7 @@ struct i2c* construct_i2c() {
 	i2c_device->master_read         = &master_RX;
 	i2c_device->slave_write         = &slave_TX;
 	i2c_device->slave_write_nbytes  = &slave_TX_Nbytes;
+	i2c_device->slave_read          = &slave_RX;
 	return i2c_device;
 }
 

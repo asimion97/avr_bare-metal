@@ -45,8 +45,8 @@ struct i2c {
 	void    (*slave_write)(uint8_t);
 	void    (*slave_write_nbytes)(uint8_t*, uint8_t);
 	
-	//TODO: Slave Reception
-	//uint8_t (*slave_read)(void);
+	//Slave Receptor
+	uint8_t (*slave_read)(void);
 };
 
 //construct i2c interface
