@@ -1,6 +1,6 @@
 #include "i2c.h"
 
-/////////////////AUX FUNCT FOR TRANSMISSION //////////////////////////////////// 
+/////////////////AUX MASTER FUNCT FOR TRANSMISSION //////////////////////////////////// 
 uint8_t _start_transmission(uint8_t _dest_addr, uint8_t direction) {
     TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN);//init start transmission
 
@@ -39,7 +39,7 @@ void _stop_transmission() {
 	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
 }
 
-////////////////AUX FUNC FOR RECEPTION (1byte )///////////////////////////////////////////
+////////////////AUX MASTER FUNC FOR RECEPTION (1byte )///////////////////////////////////////////
 uint8_t _reception(uint8_t *data_rx) {
     //uint8_t data_rx;
 	DDRC &= ~(1 << DDC4); // set pin SDA in
@@ -153,12 +153,12 @@ uint8_t slave_RX() {
     
     switch(TWSR & MASK_TWSR) {
     
-       case TW_SR_SLA_ACK  : break;
+       case TW_SR_SLA_ACK    : TWCR |= (1 << TWINT) | (1 << TWEA); break; //send ACK;
        case TW_SR_GCALL_ACK  : {
-                               data = TWDR; //read 8b Data
-                               TWCR |= (1 << TWINT) | (1 << TWEA); //send ACK
-                               break;
-                             }
+                                 data = TWDR; //read 8b Data
+                                 TWCR |= (1 << TWINT) | (1 << TWEA); //send ACK
+                                 break;
+                               }
                              
        case TW_SR_ARB_LOST_SLA_ACK:
        case TW_SR_ARB_LOST_GCALL_ACK: {
@@ -170,8 +170,8 @@ uint8_t slave_RX() {
                           break;
                         }
        default: {
-                    TWCR |= (1 << TWINT) | (1 << TWEA);
-                    break;
+                  TWCR |= (1 << TWINT) | (1 << TWEA);
+                  break;
                 }
     }
     
