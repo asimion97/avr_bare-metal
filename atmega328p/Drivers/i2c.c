@@ -76,6 +76,9 @@ void init(struct i2c_config *_conf) {
     //enble I2C
     TWCR = (1 << TWEN);
     
+    //clear data reg
+    TWDR &= 0x00; 
+    
     //compute prescaler value
     switch(_conf->prescaler){
       case 1: psclr_v = 4; break;
@@ -147,15 +150,20 @@ uint8_t master_RX(uint8_t slave_addr) {
 
 //////////// I2C slave reception func ////////////////////////////////////////
 uint8_t slave_RX() {
-    uint8_t data;
-        
-    while (!(TWCR & (1 << TWINT))); // wait for complete
+    uint8_t data = 0x00;
+    //flush
+    //TWDR &= 0x00;
     
     switch(TWSR & MASK_TWSR) {
-    
-       case TW_SR_SLA_ACK    : TWCR |= (1 << TWINT) | (1 << TWEA); break; //send ACK;
+                               
+       case TW_SR_SLA_ACK    : {
+                                 //data = TWDR;
+                                  //TWCR |= (1 << TWINT) | (1 << TWEA);
+                                  //break; //send ACK;
+                               }
+                               
        case TW_SR_GCALL_ACK  : {
-                                 data = TWDR; //read 8b Data
+                                 data = TWDR;                                 
                                  TWCR |= (1 << TWINT) | (1 << TWEA); //send ACK
                                  break;
                                }
@@ -174,7 +182,9 @@ uint8_t slave_RX() {
                   break;
                 }
     }
-    
+    Serial.println(TWSR, HEX);
+    Serial.print("TWDR: ");
+    Serial.println(data, HEX);
     return data;
 }
 
@@ -227,7 +237,7 @@ void slave_TX_Nbytes(uint8_t* data, uint8_t nbytes) {
                                   TWDR = data;
                                   TWCR = (1 << TWINT) | (1 << TWEA); //send ACK
                                   break;
-                                }                      
+                               }                      
                              
           case TW_ST_DATA_NACK: {
                                   TWCR &= ~(1 << TWEN); //disable I2C
